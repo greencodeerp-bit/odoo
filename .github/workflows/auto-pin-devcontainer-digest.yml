@@ -74,3 +74,22 @@ PY
           body: |
             Automated update of `.devcontainer/devcontainer.json` to pin the devcontainer image to the digest produced by the latest build.
           base: 18.0
+
+      - name: Auto-merge created PR
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: "devcontainer/auto-pin-${{ github.run_id }}"
+        run: |
+          set -euo pipefail
+          echo "Looking up PR for branch $BRANCH"
+          pr=$(gh pr list --repo ${{ github.repository }} --head $BRANCH --json number --jq '.[0].number') || true
+          if [ -z "$pr" ] || [ "$pr" = "null" ]; then
+            echo "PR not found, exiting"
+            exit 0
+          fi
+          echo "Found PR #$pr - attempting merge"
+          gh pr merge $pr --repo ${{ github.repository }} --merge --admin || {
+            echo "gh pr merge failed, trying REST API"
+            curl -s -X PUT -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/pulls/$pr/merge" -d '{"commit_title":"ci: auto-merge pin devcontainer image","merge_method":"merge"}'
+          }
