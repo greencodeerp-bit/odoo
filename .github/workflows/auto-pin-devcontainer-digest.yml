@@ -89,7 +89,13 @@ PY
             exit 0
           fi
           echo "Found PR #$pr - attempting merge"
-          gh pr merge $pr --repo ${{ github.repository }} --merge --admin || {
-            echo "gh pr merge failed, trying REST API"
-            curl -s -X PUT -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/pulls/$pr/merge" -d '{"commit_title":"ci: auto-merge pin devcontainer image","merge_method":"merge"}'
+          # Try to merge with gh (default merge), prefer squash
+          gh pr merge $pr --repo ${{ github.repository }} --squash --admin || {
+            echo "gh pr squash merge failed, trying REST API squash"
+            curl -s -X PUT -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/pulls/$pr/merge" -d '{"commit_title":"ci: auto-merge pin devcontainer image","merge_method":"squash"}'
           }
+
+          # After merge, add label and a comment to the PR
+          echo "Adding label auto-merged and comment to PR #$pr"
+          curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/issues/$pr/labels" -d '["auto-merged"]' || true
+          curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/issues/$pr/comments" -d '{"body":"This PR was automatically merged by the auto-pin workflow and labeled `auto-merged`."}' || true
