@@ -17,19 +17,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Determine auth token
+        id: auth
+        run: |
+          # Prefer a dedicated PAT in secrets.DEVCONTAINER_PAT, fallback to GITHUB_TOKEN
+          if [ -n "${{ secrets.DEVCONTAINER_PAT || '' }}" ]; then
+            echo "auth_token=${{ secrets.DEVCONTAINER_PAT }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "auth_token=${{ secrets.GITHUB_TOKEN }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Login to GHCR
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ steps.auth.outputs.auth_token }}
 
       - name: Get digest for :latest
         id: get_digest
         run: |
           set -euo pipefail
           echo "Fetching manifest headers for latest..."
-          headers=$(curl -sI -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -u "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" "https://ghcr.io/v2/greencodeerp-bit/odoo-devcontainer-base/manifests/latest")
+          headers=$(curl -sI -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -u "${{ github.actor }}:${{ steps.auth.outputs.auth_token }}" "https://ghcr.io/v2/greencodeerp-bit/odoo-devcontainer-base/manifests/latest")
           echo "$headers"
           digest=$(echo "$headers" | tr -d '\r' | grep -i Docker-Content-Digest | awk '{print $2}')
           if [ -z "$digest" ]; then
@@ -67,7 +77,7 @@ PY
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.auth.outputs.auth_token }}
           commit-message: "ci(devcontainer): pin image to ${{ steps.get_digest.outputs.digest }}"
           branch: "devcontainer/auto-pin-${{ github.run_id }}"
           title: "ci: pin devcontainer image to ${{ steps.get_digest.outputs.digest }}"
@@ -78,7 +88,7 @@ PY
       - name: Auto-merge created PR
         if: always()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.auth.outputs.auth_token }}
           BRANCH: "devcontainer/auto-pin-${{ github.run_id }}"
         run: |
           set -euo pipefail
