@@ -1,6 +1,6 @@
 {
   "name": "Odoo Devcontainer",
-  "image": "ghcr.io/greencodeerp-bit/odoo-devcontainer-base:latest",
+  "image": "ghcr.io/greencodeerp-bit/odoo-devcontainer-base@sha256:bc6a3959eb92bba16f8dbe498ea5d1fa8660e17eb8579aad270cdfac3719e812",
   "customizations": {
     "vscode": {
       "extensions": [
