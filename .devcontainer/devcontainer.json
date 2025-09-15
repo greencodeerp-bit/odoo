@@ -1,0 +1,19 @@
+{
+  "name": "Odoo Devcontainer",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+      ]
+    }
+  },
+  "settings": {
+    "python.defaultInterpreterPath": "/home/codespace/.python/current/bin/python"
+  },
+  "postCreateCommand": "/home/codespace/.python/current/bin/python -m pip install --cache-dir /usr/local/share/pip-cache -r /workspaces/odoo/requirements.txt || true",
+  "remoteUser": "vscode"
+}
