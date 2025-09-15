@@ -1,3 +1,51 @@
+## Configuración del Devcontainer y token de CI
+
+Este repositorio publica una imagen base del devcontainer a GHCR y el workflow `auto-pin-devcontainer-digest` actualiza automáticamente el pin en `.devcontainer/devcontainer.json`.
+
+Si tu organización o repositorio limita lo que `GITHUB_TOKEN` puede hacer (por ejemplo, no permite push/merge a ramas protegidas o no permite acceso a paquetes), crea un token personal (PAT) con los scopes mínimos recomendados y guárdalo como secret `DEVCONTAINER_PAT` en `Settings > Secrets` del repositorio.
+
+Scopes recomendados para `DEVCONTAINER_PAT` (mínimos necesarios):
+
+- `repo` (full control of private repositories) — necesario si el repositorio es privado y el workflow debe push/merge branches.
+- `workflow` — para que el token pueda gestionar workflows cuando sea necesario.
+- `write:packages` o `read:packages` — para acceder a GHCR si el repositorio las políticas lo requieren (normalmente `read:packages` basta para `docker pull`).
+
+Notas de seguridad:
+- Prefiere crear un token específico para CI (no uses tu token personal de uso interactivo). Limítalo al repositorio o a la organización cuando sea posible.
+- Rota el token periódicamente.
+
+Cómo crear el secret en GitHub (UI):
+
+1. Ve a `https://github.com/<owner>/<repo>/settings/secrets` (ej: `https://github.com/greencodeerp-bit/odoo/settings/secrets`) y selecciona "New repository secret".
+2. Nombre: `DEVCONTAINER_PAT`.
+3. Value: pega el token PAT.
+
+Uso y comportamiento esperado del workflow:
+
+- El workflow `auto-pin-devcontainer-digest` ahora utiliza `secrets.DEVCONTAINER_PAT` si está presente; si no, usa `secrets.GITHUB_TOKEN` como fallback. Esto permite que el workflow pueda empujar/mergear y etiquetar PRs aun cuando `GITHUB_TOKEN` tenga permisos limitados.
+- Flujo resumido:
+  1. Se construye y publica la imagen base a GHCR (`:latest`).
+  2. El workflow obtiene el `Docker-Content-Digest` de `:latest`.
+  3. Actualiza `.devcontainer/devcontainer.json` para pinnear la imagen por digest.
+  4. Crea un PR con la actualización y lo mergea (squash) automáticamente.
+  5. Añade una entrada al changelog `doc/DEVCONTAINER_CHANGES.md` en una rama diaria `devcontainer/chlog-YYYY-MM-DD` y crea/mergea el PR correspondiente.
+
+Comandos útiles para probar manualmente (local):
+
+```bash
+# Login gh CLI
+gh auth login
+
+# Login a GHCR usando el PAT (si lo tienes en variable CR_PAT)
+echo "$DEVCONTAINER_PAT" | docker login ghcr.io -u $(gh api user --jq '.login') --password-stdin
+
+# Pull de la imagen pinned (ejemplo)
+docker pull ghcr.io/greencodeerp-bit/odoo-devcontainer-base@sha256:<digest>
+```
+
+Si ves errores de permisos en las acciones del workflow (push/merge/label/comment), asegúrate de que el secret `DEVCONTAINER_PAT` exista y tenga los scopes adecuados. Si la organización deshabilita `GITHUB_TOKEN` ciertas acciones a nivel org, el PAT es la forma habitual de dar permisos más amplios a un workflow.
+
+Si quieres, puedo añadir instrucciones para crear el PAT con la CLI (`gh`), o cambiar el workflow para exponer pasos de diagnóstico más detallados.
 # Devcontainer setup notes
 
 Resumen:
