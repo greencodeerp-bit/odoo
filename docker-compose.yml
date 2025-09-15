@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odoo}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  odoo:
+    image: python:3.12-slim
+    restart: unless-stopped
+    depends_on:
+      - db
+    working_dir: /opt/odoo
+    volumes:
+      - ./:/opt/odoo:cached
+    ports:
+      - "8069:8069"
+    environment:
+      - PGHOST=db
+      - PGPORT=5432
+      - PGUSER=${POSTGRES_USER:-odoo}
+      - PGPASSWORD=${POSTGRES_PASSWORD:-odoo}
+      - ADMIN_PASS=${ADMIN_PASS:-admin123}
+    command: bash -c "pip install -r requirements.txt && python3 odoo-bin -c /opt/odoo/odoo.conf.production"
+
+volumes:
+  db-data:
