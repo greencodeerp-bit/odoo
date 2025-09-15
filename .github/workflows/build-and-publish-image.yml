@@ -1,0 +1,34 @@
+name: Build and publish devcontainer base image
+
+on:
+  push:
+    paths:
+      - 'docker/**'
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker
+          file: ./docker/devcontainer-base.Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/odoo-devcontainer-base:latest
