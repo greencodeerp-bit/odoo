@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - odoo-net
+
+  odoo:
+    build:
+      context: .
+      dockerfile: docker/odoo/Dockerfile
+    image: greencodeerp-bit/odoo:prod
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      - PGHOST=db
+      - PGPORT=5432
+      - PGUSER=${POSTGRES_USER}
+      - PGPASSWORD=${POSTGRES_PASSWORD}
+      - ADMIN_PASS=${ADMIN_PASS}
+      - ODOO_CONF=/etc/odoo/odoo.conf
+    volumes:
+      - odoo-filestore:/var/lib/odoo
+      - odoo-logs:/var/log/odoo
+      - ./odoo.conf.production:/etc/odoo/odoo.conf:ro
+    networks:
+      - odoo-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8069"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  proxy:
+    image: nginx:stable
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - odoo
+    networks:
+      - odoo-net
+
+volumes:
+  db-data:
+  odoo-filestore:
+  odoo-logs:
+
+networks:
+  odoo-net:
+    driver: bridge

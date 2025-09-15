@@ -1,0 +1,10 @@
+[options]
+addons_path = addons,odoo/addons
+admin_passwd = CambiaEsteAdminPassSeguro
+db_host = 127.0.0.1
+db_port = 5432
+db_user = odoo
+db_password = odoo
+proxy_mode = True
+workers = 2
+logfile = /var/log/odoo/odoo.log

@@ -159,7 +159,6 @@ import babel.core
 
 try:
     import geoip2.database
-    import geoip2.models
     import geoip2.errors
 except ImportError:
     geoip2 = None

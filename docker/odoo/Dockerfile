@@ -8,6 +8,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     ca-certificates \
     git \
+    # Dependencies required to build python-ldap and other native extensions
+    libldap2-dev \
+    libsasl2-dev \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/odoo
