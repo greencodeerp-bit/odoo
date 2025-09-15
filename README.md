@@ -35,3 +35,13 @@ Developers can start with [the developer tutorials](https://www.odoo.com/documen
 
 If you believe you have found a security issue, check our [Responsible Disclosure page](https://www.odoo.com/security-report)
 for details and get in touch with us via email.
+
+## Development container
+
+The repository provides a development container configuration. We publish a prebuilt devcontainer image to GitHub Container Registry and pin the devcontainer configuration to a specific image digest for reproducibility. The image is available at:
+
+```
+ghcr.io/greencodeerp-bit/odoo-devcontainer-base@sha256:bc6a3959eb92bba16f8dbe498ea5d1fa8660e17eb8579aad270cdfac3719e812
+```
+
+If the registry is private, authenticate with a PAT that has `read:packages` scope before creating the devcontainer.
