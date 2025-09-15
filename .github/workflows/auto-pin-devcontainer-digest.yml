@@ -1,0 +1,76 @@
+name: Auto-pin devcontainer image digest
+
+on:
+  workflow_run:
+    workflows: ["Build and publish devcontainer base image"]
+    types: [completed]
+
+permissions:
+  contents: write
+  packages: read
+
+jobs:
+  pin-digest:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get digest for :latest
+        id: get_digest
+        run: |
+          set -euo pipefail
+          echo "Fetching manifest headers for latest..."
+          headers=$(curl -sI -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -u "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" "https://ghcr.io/v2/greencodeerp-bit/odoo-devcontainer-base/manifests/latest")
+          echo "$headers"
+          digest=$(echo "$headers" | tr -d '\r' | grep -i Docker-Content-Digest | awk '{print $2}')
+          if [ -z "$digest" ]; then
+            echo "Digest not found in headers"
+            exit 1
+          fi
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Update .devcontainer/devcontainer.json
+        id: update_file
+        run: |
+          set -euo pipefail
+          digest=${{ steps.get_digest.outputs.digest }}
+          echo "Updating .devcontainer/devcontainer.json to use @$digest"
+          python - <<'PY'
+import json
+p='.devcontainer/devcontainer.json'
+with open(p,'r',encoding='utf-8') as f:
+    data=json.load(f)
+img=data.get('image','')
+if '@' in img:
+    base=img.split('@')[0]
+elif ':' in img:
+    base=img.split(':')[0]
+else:
+    base=img
+data['image']=f"{base}@{__import__('os').environ['DIGEST']}"
+with open(p,'w',encoding='utf-8') as f:
+    json.dump(data,f,indent=2)
+print('written')
+PY
+        env:
+          DIGEST: ${{ steps.get_digest.outputs.digest }}
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "ci(devcontainer): pin image to ${{ steps.get_digest.outputs.digest }}"
+          branch: "devcontainer/auto-pin-${{ github.run_id }}"
+          title: "ci: pin devcontainer image to ${{ steps.get_digest.outputs.digest }}"
+          body: |
+            Automated update of `.devcontainer/devcontainer.json` to pin the devcontainer image to the digest produced by the latest build.
+          base: 18.0
