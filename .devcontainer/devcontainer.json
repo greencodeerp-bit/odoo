@@ -1,9 +1,6 @@
 {
   "name": "Odoo Devcontainer",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
-  },
+  "image": "ghcr.io/greencodeerp-bit/odoo-devcontainer-base:latest",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -16,6 +13,5 @@
       }
     }
   },
-  "postCreateCommand": "/home/codespace/.python/current/bin/python -m pip install --cache-dir /usr/local/share/pip-cache -r /workspaces/odoo/requirements.txt || true",
-  "remoteUser": "vscode"
+  "postCreateCommand": "/home/codespace/.python/current/bin/python -m pip install --cache-dir /usr/local/share/pip-cache -r /workspaces/odoo/requirements.txt || true"
 }
