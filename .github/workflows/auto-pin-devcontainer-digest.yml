@@ -98,4 +98,6 @@ PY
           # After merge, add label and a comment to the PR
           echo "Adding label auto-merged and comment to PR #$pr"
           curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/issues/$pr/labels" -d '["auto-merged"]' || true
-          curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/issues/$pr/comments" -d '{"body":"This PR was automatically merged by the auto-pin workflow and labeled `auto-merged`."}' || true
+          RUN_URL="${{ github.event.workflow_run.html_url }}"
+          DIGEST="${{ steps.get_digest.outputs.digest }}"
+          curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/issues/$pr/comments" -d "{\"body\":\"This PR was automatically merged by the auto-pin workflow.\n\n- Digest: $DIGEST\n- Build run: $RUN_URL\n\nLabeled as `auto-merged`.\"}" || true
