@@ -1,5 +1,6 @@
 FROM python:3.12-slim
 
+# Install system deps required to build some python packages (psycopg2, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -10,8 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/odoo
-COPY . /opt/odoo
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
 
-CMD ["python3", "odoo-bin", "-c", "/opt/odoo/odoo.conf.production"]
+# We don't copy the whole repo to avoid sending a large build context.
+# Instead the repository is mounted at runtime via docker-compose volumes and
+# dependencies are installed at container start using the mounted requirements.txt.
+RUN pip install --upgrade pip
+
+CMD ["bash", "-c", "pip install -r /opt/odoo/requirements.txt && python3 /opt/odoo/odoo-bin -c /opt/odoo/odoo.conf.production"]
