@@ -28,6 +28,9 @@ services:
       - PGPASSWORD=${POSTGRES_PASSWORD}
       - ADMIN_PASS=${ADMIN_PASS}
       - ODOO_CONF=/etc/odoo/odoo.conf
+    ports:
+      - "8069:8069"
+      - "8072:8072"
     volumes:
       - odoo-filestore:/var/lib/odoo
       - odoo-logs:/var/log/odoo
@@ -51,6 +54,7 @@ services:
       # compose file is in deploy/, so nginx files live in ./nginx
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/certs:/etc/nginx/certs:ro
+      - ./nginx/www:/var/www/html
     depends_on:
       - odoo
     networks:
