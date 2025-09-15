@@ -15,7 +15,9 @@ services:
 
   odoo:
     build:
-      context: .
+      # build.context is relative to this compose file (deploy/),
+      # use the parent directory so Dockerfile at ./docker/odoo/Dockerfile (repo root) is found
+      context: ..
       dockerfile: docker/odoo/Dockerfile
     image: greencodeerp-bit/odoo:prod
     restart: unless-stopped
@@ -31,7 +33,8 @@ services:
     volumes:
       - odoo-filestore:/var/lib/odoo
       - odoo-logs:/var/log/odoo
-      - ./odoo.conf.production:/etc/odoo/odoo.conf:ro
+      # odoo.conf.production is in the repo root, so reference parent path
+      - ../odoo.conf.production:/etc/odoo/odoo.conf:ro
     networks:
       - odoo-net
     healthcheck:
@@ -47,8 +50,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./deploy/nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./deploy/nginx/certs:/etc/nginx/certs:ro
+      # compose file is in deploy/, so nginx files live in ./nginx
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - odoo
     networks:
