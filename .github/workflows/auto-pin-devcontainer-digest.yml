@@ -101,3 +101,39 @@ PY
           RUN_URL="${{ github.event.workflow_run.html_url }}"
           DIGEST="${{ steps.get_digest.outputs.digest }}"
           curl -s -X POST -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" "https://api.github.com/repos/${{ github.repository }}/issues/$pr/comments" -d "{\"body\":\"This PR was automatically merged by the auto-pin workflow.\n\n- Digest: $DIGEST\n- Build run: $RUN_URL\n\nLabeled as `auto-merged`.\"}" || true
+
+            # Fetch merge commit SHA and create a changelog entry
+            echo "Fetching merge commit SHA for PR #$pr"
+            merge_sha=$(gh api repos/${{ github.repository }}/pulls/$pr --jq '.merge_commit_sha') || true
+            if [ -n "$merge_sha" ] && [ "$merge_sha" != "null" ]; then
+              commit_url="https://github.com/${{ github.repository }}/commit/$merge_sha"
+            else
+              commit_url=""
+            fi
+
+            echo "Preparing changelog entry"
+            NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+            ENTRY="- $NOW  Digest: $DIGEST  Run: $RUN_URL  Commit: $commit_url\n"
+
+            # Create a branch, append the entry to doc/DEVCONTAINER_CHANGES.md and create a PR
+            BRANCH="devcontainer/chlog-${{ github.run_id }}"
+            git config user.name "github-actions[bot]" || true
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com" || true
+            git checkout -b $BRANCH
+            mkdir -p doc
+            FILE=doc/DEVCONTAINER_CHANGES.md
+            if [ ! -f "$FILE" ]; then
+              echo "# Devcontainer changelog" > "$FILE"
+              echo >> "$FILE"
+            fi
+            echo "$ENTRY" >> "$FILE"
+            git add "$FILE"
+            git commit -m "chore(devcontainer): add changelog entry for $DIGEST" || true
+            git push --set-upstream origin $BRANCH
+
+            echo "Creating PR for changelog update"
+            gh pr create --repo ${{ github.repository }} --title "chore: devcontainer changelog $DIGEST" --body "Automated changelog entry: $DIGEST\nRun: $RUN_URL" --base 18.0 --head $BRANCH || true
+            pr2=$(gh pr list --repo ${{ github.repository }} --head $BRANCH --json number --jq '.[0].number') || true
+            if [ -n "$pr2" ] && [ "$pr2" != "null" ]; then
+              gh pr merge $pr2 --repo ${{ github.repository }} --squash --admin || true
+            fi
