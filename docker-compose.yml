@@ -14,7 +14,9 @@ services:
       - "5433:5432"
 
   odoo:
-    image: python:3.12-slim
+    build:
+      context: .
+      dockerfile: docker/odoo/Dockerfile
     restart: unless-stopped
     depends_on:
       - db
@@ -29,7 +31,6 @@ services:
       - PGUSER=${POSTGRES_USER:-odoo}
       - PGPASSWORD=${POSTGRES_PASSWORD:-odoo}
       - ADMIN_PASS=${ADMIN_PASS:-admin123}
-    command: bash -c "pip install -r requirements.txt && python3 odoo-bin -c /opt/odoo/odoo.conf.production"
 
 volumes:
   db-data:
